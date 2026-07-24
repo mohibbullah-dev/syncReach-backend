@@ -10,21 +10,25 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
 
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  process.env.PORTAL_URL,
-  ...(process.env.CORS_ORIGINS || "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean),
-  "http://localhost:8080",
-  "http://localhost:8081",
-].filter(Boolean);
+const corsOriginsRaw = (process.env.CORS_ORIGINS || "").trim();
+const allowAllOrigins = corsOriginsRaw === "*" || process.env.CORS_ALLOW_ALL === "true";
+
+const allowedOrigins = allowAllOrigins
+  ? []
+  : [
+      process.env.CLIENT_URL,
+      process.env.PORTAL_URL,
+      ...corsOriginsRaw.split(",").map((s) => s.trim()).filter(Boolean),
+      "http://localhost:8080",
+      "http://localhost:8081",
+    ].filter(Boolean);
 
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (allowAllOrigins || !origin || allowedOrigins.includes(origin)) {
+        return cb(null, true);
+      }
       console.warn(`CORS blocked origin: ${origin}`);
       return cb(null, false);
     },

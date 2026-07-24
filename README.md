@@ -28,4 +28,11 @@ Demo: `admin@syncreach.com` / `admin123`
 - **Start:** `npm start`
 - **Health:** `/api/health`
 
-Env: `MONGODB_URI`, `JWT_SECRET`, `CLIENT_URL`, `PORTAL_URL`, Cloudinary keys, `HOST=0.0.0.0`
+Env (required for CORS with live sites):
+
+| Key | Value |
+|-----|--------|
+| `CLIENT_URL` | `https://sync-reach-public-site.vercel.app` |
+| `PORTAL_URL` | `https://sync-reach-portal-two.vercel.app` |
+| `CORS_ORIGINS` | `http://localhost:8080,http://localhost:8081` (optional) |
+| + | `MONGODB_URI`, `JWT_SECRET`, Cloudinary keys, `HOST=0.0.0.0` |
