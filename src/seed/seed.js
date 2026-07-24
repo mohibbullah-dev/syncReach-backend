@@ -9,22 +9,43 @@ import { PricingPlan } from "../models/PricingPlan.js";
 async function seed() {
   await connectDB(process.env.MONGODB_URI);
 
-  const email = (process.env.SEED_ADMIN_EMAIL || "admin@syncreach.com").toLowerCase();
-  const existing = await User.findOne({ email });
+  const name = process.env.SEED_ADMIN_NAME || "MD Shofiq";
+  const email = (process.env.SEED_ADMIN_EMAIL || "safiq3d@gmail.com").toLowerCase();
+  const password = process.env.SEED_ADMIN_PASSWORD || "admin123";
+  const legacyEmails = ["admin@syncreach.com"];
+
+  let existing = await User.findOne({ email });
+
+  // Migrate previous seed Super Admin email → new credentials (password unchanged)
+  if (!existing) {
+    for (const legacy of legacyEmails) {
+      if (legacy === email) continue;
+      const old = await User.findOne({ email: legacy });
+      if (old) {
+        old.name = name;
+        old.email = email;
+        old.role = "SuperAdmin";
+        await old.save();
+        existing = old;
+        console.log(`Super Admin migrated: ${legacy} → ${email}`);
+        break;
+      }
+    }
+  }
+
   if (!existing) {
     await User.create({
-      name: process.env.SEED_ADMIN_NAME || "Shofiq",
+      name,
       email,
-      password: process.env.SEED_ADMIN_PASSWORD || "admin123",
+      password,
       role: "SuperAdmin",
     });
     console.log(`Super Admin created: ${email}`);
-  } else if (existing.role !== "SuperAdmin") {
+  } else {
+    existing.name = name;
     existing.role = "SuperAdmin";
     await existing.save();
-    console.log(`Upgraded to Super Admin: ${email}`);
-  } else {
-    console.log(`Super Admin already exists: ${email}`);
+    console.log(`Super Admin ready: ${name} <${email}>`);
   }
 
   if ((await Review.countDocuments()) === 0) {
@@ -73,7 +94,7 @@ async function seed() {
   if ((await TeamMember.countDocuments()) === 0) {
     await TeamMember.insertMany([
       {
-        name: "Md Safiq",
+        name: "Md Sabid KhaSafiq",
         role: "Co-Founder & CEO",
         img: "",
         sortOrder: 1,

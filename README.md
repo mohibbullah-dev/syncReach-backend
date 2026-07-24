@@ -19,7 +19,7 @@ npm run dev            # http://localhost:5000
 | `npm start` | Production |
 | `npm run seed` | Create demo admin + sample data |
 
-Demo: `admin@syncreach.com` / `admin123`
+Super Admin: `safiq3d@gmail.com` / `admin123`
 
 ## Render
 
