@@ -22,9 +22,18 @@ export async function requireAuth(req, res, next) {
   }
 }
 
+/** CMS access — SuperAdmin or Admin */
 export function requireAdmin(req, res, next) {
-  if (!req.user || (req.user.role !== "Admin" && req.user.role !== "Editor")) {
+  if (!req.user || (req.user.role !== "SuperAdmin" && req.user.role !== "Admin")) {
     return res.status(403).json({ message: "Admin access required." });
+  }
+  next();
+}
+
+/** Only SuperAdmin — create/delete staff accounts */
+export function requireSuperAdmin(req, res, next) {
+  if (!req.user || req.user.role !== "SuperAdmin") {
+    return res.status(403).json({ message: "Super Admin access required." });
   }
   next();
 }

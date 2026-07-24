@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import { Review } from "../models/Review.js";
 import { GalleryItem } from "../models/GalleryItem.js";
 import { TeamMember } from "../models/TeamMember.js";
+import { PricingPlan } from "../models/PricingPlan.js";
 
 async function seed() {
   await connectDB(process.env.MONGODB_URI);
@@ -15,11 +16,15 @@ async function seed() {
       name: process.env.SEED_ADMIN_NAME || "Sabid Khan",
       email,
       password: process.env.SEED_ADMIN_PASSWORD || "admin123",
-      role: "Admin",
+      role: "SuperAdmin",
     });
-    console.log(`Admin created: ${email}`);
+    console.log(`Super Admin created: ${email}`);
+  } else if (existing.role !== "SuperAdmin") {
+    existing.role = "SuperAdmin";
+    await existing.save();
+    console.log(`Upgraded to Super Admin: ${email}`);
   } else {
-    console.log(`Admin already exists: ${email}`);
+    console.log(`Super Admin already exists: ${email}`);
   }
 
   if ((await Review.countDocuments()) === 0) {
@@ -83,6 +88,76 @@ async function seed() {
       },
     ]);
     console.log("Sample team seeded");
+  }
+
+  if ((await PricingPlan.countDocuments()) === 0) {
+    await PricingPlan.insertMany([
+      {
+        badge: "STARTER",
+        name: "Starter",
+        desc: "For founders launching outbound and validating their offer.",
+        price: "$500",
+        unit: "/ month",
+        extrasBadge: "14-day free trial",
+        extrasNote: "No credit card required to start",
+        features: [
+          "5,000 emails / mo",
+          "5 warmed inboxes",
+          "Email copywriter",
+          "Lead finder (2k credits)",
+          "Basic analytics",
+          "Email support",
+        ],
+        cta: "Start with Starter",
+        featured: false,
+        sortOrder: 1,
+        published: true,
+      },
+      {
+        badge: "MOST POPULAR",
+        name: "Growth",
+        desc: "For growing teams booking qualified meetings every week.",
+        price: "$1,000",
+        unit: "/ month",
+        extrasBadge: "Unlimited warmed inboxes",
+        extrasNote: "Best value for scaling outbound teams",
+        features: [
+          "25,000 emails / mo",
+          "Unlimited warmed inboxes",
+          "Personalization + LinkedIn",
+          "Multi-channel sequences",
+          "10k lead credits",
+          "CRM integrations",
+          "Priority support",
+        ],
+        cta: "Choose Growth",
+        featured: true,
+        sortOrder: 2,
+        published: true,
+      },
+      {
+        badge: "SCALE",
+        name: "Scale",
+        desc: "For agencies and outbound-heavy revenue teams.",
+        price: "$2,000",
+        unit: "/ month",
+        extrasBadge: "Dedicated success manager",
+        extrasNote: "Custom SLAs and security review included",
+        features: [
+          "Unlimited emails",
+          "Unlimited seats & inboxes",
+          "Dedicated deliverability manager",
+          "Custom playbook training",
+          "Slack support",
+          "SLA + security review",
+        ],
+        cta: "Talk to sales",
+        featured: false,
+        sortOrder: 3,
+        published: true,
+      },
+    ]);
+    console.log("Sample pricing seeded");
   }
 
   console.log("Seed complete.");

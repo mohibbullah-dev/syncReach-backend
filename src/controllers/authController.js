@@ -1,34 +1,11 @@
 import { User } from "../models/User.js";
 import { publicUser, signToken } from "../utils/auth.js";
 
-export async function signup(req, res, next) {
-  try {
-    const { name, email, password, avatarUrl } = req.body;
-    if (!name?.trim() || !email?.trim() || !password) {
-      return res.status(400).json({ message: "Name, email, and password are required." });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters." });
-    }
-
-    const exists = await User.findOne({ email: email.toLowerCase().trim() });
-    if (exists) {
-      return res.status(409).json({ message: "An account with this email already exists." });
-    }
-
-    const user = await User.create({
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password,
-      role: "Admin",
-      avatarUrl: avatarUrl?.trim() || "",
-    });
-
-    const token = signToken(user);
-    res.status(201).json({ token, user: publicUser(user) });
-  } catch (err) {
-    next(err);
-  }
+/** Public self-signup is disabled — Super Admin creates staff accounts. */
+export async function signup(_req, res) {
+  return res.status(403).json({
+    message: "Public sign-up is disabled. Ask a Super Admin to create your account.",
+  });
 }
 
 export async function login(req, res, next) {
@@ -37,6 +14,9 @@ export async function login(req, res, next) {
     const user = await User.findOne({ email: (email || "").toLowerCase().trim() });
     if (!user || !(await user.comparePassword(password || ""))) {
       return res.status(401).json({ message: "Invalid email or password." });
+    }
+    if (user.role !== "SuperAdmin" && user.role !== "Admin") {
+      return res.status(403).json({ message: "Admin access required." });
     }
     const token = signToken(user);
     res.json({ token, user: publicUser(user) });
