@@ -13,7 +13,7 @@ async function seed() {
   const existing = await User.findOne({ email });
   if (!existing) {
     await User.create({
-      name: process.env.SEED_ADMIN_NAME || "Sabid Khan",
+      name: process.env.SEED_ADMIN_NAME || "Shopiq",
       email,
       password: process.env.SEED_ADMIN_PASSWORD || "admin123",
       role: "SuperAdmin",
