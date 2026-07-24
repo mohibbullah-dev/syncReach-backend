@@ -47,6 +47,15 @@ export async function uploadFile(req, res, next) {
       duration: result.duration,
     });
   } catch (err) {
+    const cloudMsg = err?.error?.message || err?.message || "";
+    if (err?.http_code === 403 || /missing permissions|forbidden/i.test(cloudMsg)) {
+      return res.status(403).json({
+        message:
+          "Cloudinary API key cannot upload (missing create permission). " +
+          "In Cloudinary Console → Settings → API Keys, edit/create a key with Upload access, then update CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.",
+        detail: cloudMsg || undefined,
+      });
+    }
     next(err);
   }
 }
