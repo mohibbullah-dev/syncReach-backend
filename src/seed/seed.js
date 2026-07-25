@@ -4,7 +4,7 @@ import { User } from "../models/User.js";
 import { Review } from "../models/Review.js";
 import { GalleryItem } from "../models/GalleryItem.js";
 import { TeamMember } from "../models/TeamMember.js";
-import { PricingPlan } from "../models/PricingPlan.js";
+import { PricingPlan, defaultCustomConfig } from "../models/PricingPlan.js";
 
 async function seed() {
   await connectDB(process.env.MONGODB_URI);
@@ -111,6 +111,20 @@ async function seed() {
     console.log("Sample team seeded");
   }
 
+  // Remove free-trial / credit-card copy from any existing plans
+  const trialCleanup = await PricingPlan.updateMany(
+    {
+      $or: [
+        { extrasBadge: /free trial/i },
+        { extrasNote: /credit card/i },
+      ],
+    },
+    { $set: { extrasBadge: "", extrasNote: "" } },
+  );
+  if (trialCleanup.modifiedCount) {
+    console.log(`Cleared free-trial extras on ${trialCleanup.modifiedCount} plan(s)`);
+  }
+
   if ((await PricingPlan.countDocuments()) === 0) {
     await PricingPlan.insertMany([
       {
@@ -119,8 +133,8 @@ async function seed() {
         desc: "For founders launching outbound and validating their offer.",
         price: "$500",
         unit: "/ month",
-        extrasBadge: "14-day free trial",
-        extrasNote: "No credit card required to start",
+        extrasBadge: "",
+        extrasNote: "",
         features: [
           "5,000 emails / mo",
           "5 warmed inboxes",
@@ -133,6 +147,7 @@ async function seed() {
         featured: false,
         sortOrder: 1,
         published: true,
+        planType: "fixed",
       },
       {
         badge: "MOST POPULAR",
@@ -155,30 +170,82 @@ async function seed() {
         featured: true,
         sortOrder: 2,
         published: true,
+        planType: "fixed",
       },
       {
-        badge: "SCALE",
-        name: "Scale",
-        desc: "For agencies and outbound-heavy revenue teams.",
-        price: "$2,000",
+        badge: "CUSTOM",
+        name: "Custom",
+        desc: "Build your own outbound stack — pick volume, seats, and add-ons.",
+        price: "Custom",
         unit: "/ month",
-        extrasBadge: "Dedicated success manager",
-        extrasNote: "Custom SLAs and security review included",
+        extrasBadge: "",
+        extrasNote: "",
         features: [
-          "Unlimited emails",
-          "Unlimited seats & inboxes",
-          "Dedicated deliverability manager",
-          "Custom playbook training",
-          "Slack support",
-          "SLA + security review",
+          "Flexible email volume",
+          "Warmed inboxes on demand",
+          "Seats for your team",
+          "Optional LinkedIn outreach",
+          "Dedicated success support",
         ],
-        cta: "Talk to sales",
+        cta: "Get this quote",
         featured: false,
         sortOrder: 3,
         published: true,
+        planType: "custom",
+        customConfig: defaultCustomConfig(),
       },
     ]);
     console.log("Sample pricing seeded");
+  }
+
+  // Migrate legacy Scale plan → Custom quote builder
+  const scale = await PricingPlan.findOne({
+    $or: [{ name: /^scale$/i }, { badge: /^scale$/i }],
+    planType: { $ne: "custom" },
+  });
+  if (scale) {
+    scale.badge = "CUSTOM";
+    scale.name = "Custom";
+    scale.desc = "Build your own outbound stack — pick volume, seats, and add-ons.";
+    scale.price = "Custom";
+    scale.unit = "/ month";
+    scale.extrasBadge = "";
+    scale.extrasNote = "";
+    scale.features = [
+      "Flexible email volume",
+      "Warmed inboxes on demand",
+      "Seats for your team",
+      "Optional LinkedIn outreach",
+      "Dedicated success support",
+    ];
+    scale.cta = "Get this quote";
+    scale.planType = "custom";
+    scale.customConfig = defaultCustomConfig();
+    scale.markModified("customConfig");
+    await scale.save();
+    console.log("Migrated Scale → Custom quote plan");
+  } else if (!(await PricingPlan.findOne({ planType: "custom" }))) {
+    await PricingPlan.create({
+      badge: "CUSTOM",
+      name: "Custom",
+      desc: "Build your own outbound stack — pick volume, seats, and add-ons.",
+      price: "Custom",
+      unit: "/ month",
+      features: [
+        "Flexible email volume",
+        "Warmed inboxes on demand",
+        "Seats for your team",
+        "Optional LinkedIn outreach",
+        "Dedicated success support",
+      ],
+      cta: "Get this quote",
+      featured: false,
+      sortOrder: 3,
+      published: true,
+      planType: "custom",
+      customConfig: defaultCustomConfig(),
+    });
+    console.log("Custom quote plan created");
   }
 
   console.log("Seed complete.");
