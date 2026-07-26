@@ -5,6 +5,7 @@ import { Review } from "../models/Review.js";
 import { GalleryItem } from "../models/GalleryItem.js";
 import { TeamMember } from "../models/TeamMember.js";
 import { PricingPlan, defaultCustomConfig } from "../models/PricingPlan.js";
+import { FaqItem } from "../models/FaqItem.js";
 
 async function seed() {
   await connectDB(process.env.MONGODB_URI);
@@ -67,15 +68,40 @@ async function seed() {
         username: "@jordan",
         role: "Founder · B2B startup",
         avatar: "",
-        body: "The personalization is spot-on. Prospects reply asking who wrote it — our team did.",
+        body: "The personalization is spot-on. Prospects reply asking who wrote it? Our team did.",
         mediaUrl: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
         thumbnailUrl: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=640&q=80",
         rating: 5,
         featured: true,
         published: true,
       },
+      {
+        type: "image",
+        name: "Priya Sen",
+        username: "@priya",
+        role: "SDR Manager · Fintech",
+        avatar: "",
+        body: "Deliverability is the best I've ever seen. Finally, cold email that lands.",
+        mediaUrl: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=900&q=80",
+        rating: 5,
+        featured: true,
+        published: true,
+      },
     ]);
     console.log("Sample reviews seeded");
+  }
+
+  // Migrate legacy audio reviews → image
+  const audioReviews = await Review.find({ type: "audio" });
+  for (const r of audioReviews) {
+    r.type = "image";
+    if (!r.mediaUrl || /\.(mp3|wav|ogg|m4a)(\?|$)/i.test(r.mediaUrl)) {
+      r.mediaUrl =
+        r.thumbnailUrl ||
+        "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=900&q=80";
+    }
+    await r.save();
+    console.log(`Migrated review "${r.name}" audio → image`);
   }
 
   if ((await GalleryItem.countDocuments()) === 0) {
@@ -175,7 +201,7 @@ async function seed() {
       {
         badge: "CUSTOM",
         name: "Custom",
-        desc: "Build your own outbound stack — pick volume, seats, and add-ons.",
+        desc: "Build your own outbound stack. Pick volume, seats, and add ons.",
         price: "Custom",
         unit: "/ month",
         extrasBadge: "",
@@ -206,7 +232,7 @@ async function seed() {
   if (scale) {
     scale.badge = "CUSTOM";
     scale.name = "Custom";
-    scale.desc = "Build your own outbound stack — pick volume, seats, and add-ons.";
+    scale.desc = "Build your own outbound stack. Pick volume, seats, and add ons.";
     scale.price = "Custom";
     scale.unit = "/ month";
     scale.extrasBadge = "";
@@ -250,7 +276,7 @@ async function seed() {
     await PricingPlan.create({
       badge: "CUSTOM",
       name: "Custom",
-      desc: "Build your own outbound stack — pick volume, seats, and add-ons.",
+      desc: "Build your own outbound stack. Pick volume, seats, and add ons.",
       price: "Custom",
       unit: "/ month",
       features: [
@@ -279,6 +305,70 @@ async function seed() {
       await plan.save();
       console.log(`Restored customConfig for "${plan.name}"`);
     }
+  }
+
+  if ((await FaqItem.countDocuments()) === 0) {
+    await FaqItem.insertMany([
+      {
+        question: "How fast can SyncReach launch our first campaign?",
+        answer:
+          "Most clients are live within 14 days. Infrastructure setup and warm up takes the first 10, copy and targeting the rest.",
+        sortOrder: 1,
+        published: true,
+      },
+      {
+        question: "What kind of reply rates should we expect?",
+        answer:
+          "Well targeted campaigns average 8 to 15% reply rates in the first 60 days, with positive replies typically 2 to 4% of sends.",
+        sortOrder: 2,
+        published: true,
+      },
+      {
+        question: "Do you handle deliverability and inbox warm up?",
+        answer:
+          "Yes, every inbox is warmed on our private network and monitored 24/7 so your sends land in the primary inbox, not spam.",
+        sortOrder: 3,
+        published: true,
+      },
+      {
+        question: "Which industries do you specialize in?",
+        answer:
+          "B2B SaaS, agencies, professional services, and fintech. If your ACV is above $2k, we can build a pipeline for you.",
+        sortOrder: 4,
+        published: true,
+      },
+      {
+        question: "What if it doesn't work?",
+        answer:
+          "We work in 90 day cycles with clear KPIs. If we miss the target, we keep working at no extra cost until we hit it.",
+        sortOrder: 5,
+        published: true,
+      },
+    ]);
+    console.log("Sample FAQ seeded");
+  }
+
+  // Strip em/en dashes from existing FAQ copy (older seeds)
+  const faqDocs = await FaqItem.find({
+    $or: [{ question: /[—–]/ }, { answer: /[—–]/ }, { answer: /warm-up/i }, { question: /warm-up/i }],
+  });
+  for (const item of faqDocs) {
+    item.question = String(item.question || "")
+      .replace(/[—–]/g, ",")
+      .replace(/,\s*,/g, ",")
+      .replace(/warm-up/gi, "warm up")
+      .replace(/\s+/g, " ")
+      .trim();
+    item.answer = String(item.answer || "")
+      .replace(/[—–]/g, ",")
+      .replace(/,\s*,/g, ",")
+      .replace(/warm-up/gi, "warm up")
+      .replace(/8–15%|8-15%/g, "8 to 15%")
+      .replace(/2–4%|2-4%/g, "2 to 4%")
+      .replace(/\s+/g, " ")
+      .trim();
+    await item.save();
+    console.log(`Cleaned FAQ dashes: ${item.question.slice(0, 40)}…`);
   }
 
   console.log("Seed complete.");

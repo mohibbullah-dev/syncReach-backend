@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const reviewSchema = new mongoose.Schema(
   {
-    type: { type: String, enum: ["text", "audio", "video"], required: true },
+    // "audio" kept briefly for legacy docs; API maps audio → image
+    type: { type: String, enum: ["text", "image", "video", "audio"], required: true },
     name: { type: String, required: true, trim: true },
     username: { type: String, required: true, trim: true },
     role: { type: String, default: "Customer" },
