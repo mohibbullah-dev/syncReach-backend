@@ -3,6 +3,18 @@ import { PricingPlan, defaultCustomConfig } from "../models/PricingPlan.js";
 function mapCustomConfig(cfg) {
   if (!cfg) return null;
   const o = typeof cfg.toObject === "function" ? cfg.toObject() : cfg;
+  const levers = Array.isArray(o.levers)
+    ? o.levers.map((l) => ({
+        id: l.id,
+        label: l.label,
+        kind: l.kind,
+        min: Number(l.min) || 0,
+        max: Number(l.max) || 100,
+        step: Number(l.step) || 1,
+        unitPrice: Number(l.unitPrice) || 0,
+      }))
+    : [];
+  if (!levers.length) return null;
   return {
     basePrice: Number(o.basePrice) || 0,
     currencyPrefix: o.currencyPrefix || "$",
@@ -11,23 +23,24 @@ function mapCustomConfig(cfg) {
     estimateNote:
       o.estimateNote || "Estimated monthly · final quote confirmed by team",
     defaults: o.defaults && typeof o.defaults === "object" ? o.defaults : {},
-    levers: Array.isArray(o.levers)
-      ? o.levers.map((l) => ({
-          id: l.id,
-          label: l.label,
-          kind: l.kind,
-          min: Number(l.min) || 0,
-          max: Number(l.max) || 100,
-          step: Number(l.step) || 1,
-          unitPrice: Number(l.unitPrice) || 0,
-        }))
-      : [],
+    levers,
   };
+}
+
+function looksLikeCustomPlan(o) {
+  const badge = String(o.badge || "").trim().toLowerCase();
+  const name = String(o.name || "").trim().toLowerCase();
+  const price = String(o.price || "").trim().toLowerCase();
+  if (o.planType === "custom") return true;
+  if (Array.isArray(o.customConfig?.levers) && o.customConfig.levers.length > 0) return true;
+  if (badge === "custom" || name === "custom") return true;
+  if (price === "custom" || price === "quote") return true;
+  return false;
 }
 
 function mapPlan(doc) {
   const o = doc.toObject();
-  const planType = o.planType === "custom" ? "custom" : "fixed";
+  const planType = looksLikeCustomPlan(o) ? "custom" : "fixed";
   return {
     id: o._id.toString(),
     badge: o.badge,

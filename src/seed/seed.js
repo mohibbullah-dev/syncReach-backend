@@ -224,7 +224,29 @@ async function seed() {
     scale.markModified("customConfig");
     await scale.save();
     console.log("Migrated Scale → Custom quote plan");
-  } else if (!(await PricingPlan.findOne({ planType: "custom" }))) {
+  }
+
+  // Upgrade existing Custom-named plans that were saved as fixed (missing config)
+  const customLike = await PricingPlan.find({
+    planType: { $ne: "custom" },
+    $or: [
+      { badge: /^custom$/i },
+      { name: /^custom$/i },
+      { price: /^custom$/i },
+    ],
+  });
+  for (const plan of customLike) {
+    plan.planType = "custom";
+    if (!plan.customConfig?.levers?.length) {
+      plan.customConfig = defaultCustomConfig();
+      plan.markModified("customConfig");
+    }
+    if (!plan.cta || !/quote/i.test(plan.cta)) plan.cta = "Get this quote";
+    await plan.save();
+    console.log(`Upgraded "${plan.name}" → custom quote builder`);
+  }
+
+  if (!(await PricingPlan.findOne({ planType: "custom" }))) {
     await PricingPlan.create({
       badge: "CUSTOM",
       name: "Custom",
@@ -246,6 +268,17 @@ async function seed() {
       customConfig: defaultCustomConfig(),
     });
     console.log("Custom quote plan created");
+  }
+
+  // Ensure every custom plan has levers (empty config breaks public UI)
+  const customs = await PricingPlan.find({ planType: "custom" });
+  for (const plan of customs) {
+    if (!plan.customConfig?.levers?.length) {
+      plan.customConfig = defaultCustomConfig();
+      plan.markModified("customConfig");
+      await plan.save();
+      console.log(`Restored customConfig for "${plan.name}"`);
+    }
   }
 
   console.log("Seed complete.");
