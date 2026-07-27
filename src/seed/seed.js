@@ -6,7 +6,7 @@ import { GalleryItem } from "../models/GalleryItem.js";
 import { TeamMember } from "../models/TeamMember.js";
 import { PricingPlan, defaultCustomConfig } from "../models/PricingPlan.js";
 import { FaqItem } from "../models/FaqItem.js";
-import { HeroContent, defaultHeroPayload } from "../models/HeroContent.js";
+import { HeroContent, defaultHeroPayload, defaultHeroCarousel } from "../models/HeroContent.js";
 
 async function seed() {
   await connectDB(process.env.MONGODB_URI);
@@ -375,6 +375,28 @@ async function seed() {
   if ((await HeroContent.countDocuments()) === 0) {
     await HeroContent.create(defaultHeroPayload());
     console.log("Default hero content seeded");
+  }
+
+  const heroDoc = await HeroContent.findOne();
+  if (heroDoc) {
+    let changed = false;
+    if ((!heroDoc.slides || heroDoc.slides.length === 0) && heroDoc.mediaUrl) {
+      heroDoc.slides = [
+        {
+          type: heroDoc.mediaType === "image" ? "image" : "video",
+          mediaUrl: heroDoc.mediaUrl,
+          posterUrl: heroDoc.posterUrl || "",
+          sortOrder: 0,
+        },
+      ];
+      changed = true;
+      console.log("Migrated legacy hero media to slides");
+    }
+    if (!heroDoc.carousel) {
+      heroDoc.carousel = defaultHeroCarousel();
+      changed = true;
+    }
+    if (changed) await heroDoc.save();
   }
 
   console.log("Seed complete.");
