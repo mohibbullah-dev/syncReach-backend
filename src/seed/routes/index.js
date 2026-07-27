@@ -6,6 +6,7 @@ import galleryRoutes from "./galleryRoutes.js";
 import teamRoutes from "./teamRoutes.js";
 import pricingRoutes from "./pricingRoutes.js";
 import faqRoutes from "./faqRoutes.js";
+import heroRoutes from "./heroRoutes.js";
 import contactRoutes from "./contactRoutes.js";
 import uploadRoutes from "./uploadRoutes.js";
 
@@ -22,6 +23,7 @@ router.use("/gallery", galleryRoutes);
 router.use("/team", teamRoutes);
 router.use("/pricing", pricingRoutes);
 router.use("/faq", faqRoutes);
+router.use("/hero", heroRoutes);
 router.use("/contact", contactRoutes);
 router.use("/upload", uploadRoutes);
 

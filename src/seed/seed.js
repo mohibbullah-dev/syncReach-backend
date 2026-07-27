@@ -6,6 +6,7 @@ import { GalleryItem } from "../models/GalleryItem.js";
 import { TeamMember } from "../models/TeamMember.js";
 import { PricingPlan, defaultCustomConfig } from "../models/PricingPlan.js";
 import { FaqItem } from "../models/FaqItem.js";
+import { HeroContent, defaultHeroPayload } from "../models/HeroContent.js";
 
 async function seed() {
   await connectDB(process.env.MONGODB_URI);
@@ -369,6 +370,11 @@ async function seed() {
       .trim();
     await item.save();
     console.log(`Cleaned FAQ dashes: ${item.question.slice(0, 40)}…`);
+  }
+
+  if ((await HeroContent.countDocuments()) === 0) {
+    await HeroContent.create(defaultHeroPayload());
+    console.log("Default hero content seeded");
   }
 
   console.log("Seed complete.");
